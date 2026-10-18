@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conditional Kingdom</title>
+
+  <style>
+    /* ==========================================================================
+       RESET & BASE STYLES
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #05050a;
+      font-family: 'Cinzel', 'Georgia', serif;
+      color: #f0e6d2;
+    }
+
+    /* Outer Wrapper for responsive 16:9 ratio */
+    #game-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #020205;
+    }
+
+    /* Main Container */
+    #game-container {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+      background-color: #0a0a12;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 15px rgba(212, 175, 55, 0.2);
+      border: 4px solid #3a2e1d;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    /* Gameplay Canvas Layer */
+    #canvas-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1280px;
+      height: 720px;
+      z-index: 10;
+    }
+
+    /* Common UI Layer Styling */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1280px;
+      height: 720px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+    }
+
+    .ui-layer.active {
+      pointer-events: auto !important;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Button Styling */
+    .btn-medieval {
+      background: linear-gradient(180deg, #5a3d28 0%, #362214 100%);
+      border: 3px solid #f1c40f;
+      border-radius: 8px;
+      color: #ffffff;
+      font-family: 'Cinzel', 'Georgia', serif;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 12px 28px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.2);
+      transition: all 0.2s ease;
+      text-shadow: 2px 2px 4px #000;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .btn-medieval:hover {
+      background: linear-gradient(180deg, #785338 0%, #4a301d 100%);
+      border-color: #ffd700;
+      color: #fff8dc;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.9), 0 0 12px rgba(255,215,0,0.5);
+    }
+
+    .btn-medieval:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    /* ==========================================================================
+       MAIN MENU UI
+       ========================================================================== */
+    #main-menu-ui {
+      background: radial-gradient(circle, rgba(20,15,35,0.85) 0%, rgba(5,5,12,0.98) 100%);
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+
+    .menu-title-container {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: floatTitle 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatTitle {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(-10px); }
+    }
+
+    .menu-title {
+      font-size: 64px;
+      color: #f1c40f;
+      text-shadow: 0 0 20px rgba(241, 196, 15, 0.6), 0 4px 10px #000;
+      letter-spacing: 4px;
+      margin-bottom: 5px;
+    }
+
+    .menu-subtitle {
+      font-size: 20px;
+      color: #a8b2c1;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 340px;
+    }
+
+    /* ==========================================================================
+       PARCHMENT OVERLAYS
+       ========================================================================== */
+    .parchment-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1280px;
+      height: 720px;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .parchment-box {
+      width: 900px;
+      height: 580px;
+      background: #f4e3c3;
+      border: 10px solid #5a3d28;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.9), inset 0 0 50px rgba(100, 70, 40, 0.4);
+      padding: 40px;
+      color: #2c1d11;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .parchment-header {
+      font-size: 32px;
+      color: #4a2c11;
+      border-bottom: 3px solid #8c6d46;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .parchment-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 15px;
+    }
+
+    .parchment-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .parchment-content::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+
+    .parchment-content::-webkit-scrollbar-thumb {
+      background: #8c6d46;
+      border-radius: 4px;
+    }
+
+    .parchment-close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 32px;
+      font-weight: bold;
+      color: #4a2c11;
+      cursor: pointer;
+    }
+
+    .parchment-close:hover {
+      color: #8b0000;
+    }
+
+    /* Knowledge Book Content */
+    .kb-section {
+      margin-bottom: 25px;
+      background: rgba(255, 255, 255, 0.4);
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 5px solid #8c6d46;
+    }
+
+    .kb-section h3 {
+      font-size: 22px;
+      color: #5a2a0a;
+      margin-bottom: 8px;
+    }
+
+    .kb-section p {
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+
+    .kb-section .formula {
+      font-family: monospace;
+      font-weight: bold;
+      background: rgba(74, 44, 17, 0.15);
+      padding: 6px 10px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 10px;
+      color: #3b1e08;
+    }
+
+    .kb-section ul {
+      margin-left: 20px;
+      font-style: italic;
+    }
+
+    /* Glossary Grid */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .glossary-card {
+      background: rgba(255, 255, 255, 0.45);
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #a68b68;
+    }
+
+    .glossary-card h4 {
+      font-size: 20px;
+      color: #4a2c11;
+      margin-bottom: 5px;
+    }
+
+    .glossary-card .role {
+      font-size: 14px;
+      font-weight: bold;
+      color: #7a4b1e;
+      margin-bottom: 8px;
+    }
+
+    /* Story Intro Scroll */
+    .intro-scroll-box {
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .intro-text-page {
+      font-size: 26px;
+      line-height: 1.8;
+      color: #3a220f;
+      font-style: italic;
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .intro-nav {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-top: 30px;
+    }
+
+    /* ==========================================================================
+       COMBAT & HUD UI
+       ========================================================================== */
+    #hud-layer {
+      pointer-events: none;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 25;
+    }
+
+    .hud-card {
+      background: rgba(15, 10, 25, 0.85);
+      border: 3px solid #f1c40f;
+      border-radius: 8px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    .hud-name {
+      font-size: 16px;
+      font-weight: bold;
+      color: #f1c40f;
+      letter-spacing: 1px;
+    }
+
+    .hud-hearts {
+      font-size: 22px;
+      letter-spacing: 2px;
+    }
+
+    .hud-controls-hint {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      color: #a8b2c1;
+      border: 1px solid rgba(255,215,0,0.3);
+    }
+
+    /* Compact combat question panel */
+    #question-panel {
+      position: absolute;
+      top: 96px;
+      bottom: auto;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(1180px, calc(100% - 48px));
+      height: 145px;
+      background: linear-gradient(180deg, rgba(18,12,28,0.96) 0%, rgba(6,3,10,0.99) 100%);
+      border: 3px solid #f1c40f;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.65);
+      display: flex;
+      flex-direction: column;
+      padding: 10px 32px;
+      z-index: 32;
+      pointer-events: auto;
+    }
+
+    .qp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .qp-category {
+      font-size: 15px;
+      color: #e67e22;
+      text-transform: uppercase;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .qp-book-btn {
+      padding: 6px 14px;
+      font-size: 13px;
+    }
+
+    .qp-prompt {
+      font-size: 20px;
+      color: #ffffff;
+      margin-bottom: 8px;
+      text-align: center;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 2px 4px #000;
+    }
+
+    .qp-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .btn-option {
+      background: linear-gradient(180deg, #2b2236 0%, #171220 100%);
+      border: 2px solid #6c5ce7;
+      border-radius: 6px;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 15px;
+      padding: 9px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+    }
+
+    .btn-option:hover {
+      background: linear-gradient(180deg, #483461 0%, #291d3b 100%);
+      border-color: #f1c40f;
+      color: #ffffff;
+      transform: translateY(-2px);
+    }
+
+    /* Dialogue Banner overlay */
+    #dialogue-banner {
+      position: absolute;
+      top: 98px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(900px, calc(100% - 48px));
+      max-height: 150px;
+      overflow-y: auto;
+      background: rgba(12, 8, 18, 0.92);
+      border: 3px solid #f1c40f;
+      border-radius: 10px;
+      padding: 10px 20px;
+      z-index: 35;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      pointer-events: auto;
+    }
+
+    .db-speaker {
+      font-size: 16px;
+      font-weight: bold;
+      color: #f1c40f;
+      letter-spacing: 1px;
+    }
+
+    .db-text {
+      font-size: 18px;
+      color: #e2d8ce;
+      line-height: 1.4;
+    }
+
+    .db-next-btn {
+      align-self: flex-end;
+      padding: 6px 16px;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    @media (max-height: 650px) {
+      #dialogue-banner { top: 88px; max-height: 130px; padding: 8px 16px; }
+      #question-panel { top: 88px; width: 92%; height: 132px; padding: 8px 20px; }
+      .qp-prompt { font-size: 18px; min-height: 30px; margin-bottom: 5px; }
+      .btn-option { padding: 7px 8px; }
+    }
+
+    /* Final Screen Banner */
+    #final-screen {
+      background: rgba(5, 3, 10, 0.95);
+      z-index: 120;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      pointer-events: auto !important;
+    }
+
+    .final-card {
+      max-width: 700px;
+      padding: 40px;
+      border: 4px solid #f1c40f;
+      border-radius: 14px;
+      background: radial-gradient(circle, #2a1b3d 0%, #0d0814 100%);
+      box-shadow: 0 0 50px rgba(241, 196, 15, 0.4);
+      pointer-events: auto;
+    }
+
+    .final-title {
+      font-size: 42px;
+      color: #f1c40f;
+      margin-bottom: 10px;
+    }
+
+    .final-subtitle {
+      font-size: 24px;
+      color: #e84118;
+      margin-bottom: 25px;
+      letter-spacing: 2px;
+    }
+
+    .final-quote {
+      font-size: 20px;
+      font-style: italic;
+      color: #dcdde1;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    .final-hearts {
+      font-size: 32px;
+      margin-bottom: 25px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-wrapper">
+    <div id="game-container">
+
+      <!-- Canvas Render Layer -->
+      <canvas id="canvas-layer" width="1280" height="720"></canvas>
+
+      <!-- HUD Layer -->
+      <div id="hud-layer" class="ui-layer hidden">
+        <div class="hud-card">
+          <div class="hud-name">🧙 ALDRIC</div>
+          <div id="aldric-hearts" class="hud-hearts">❤️❤️❤️</div>
+        </div>
+
+        <div class="hud-controls-hint">
+          [ Auto-Walking Active ] | [ ESC ]: Pause
+        </div>
+
+        <div id="enemy-hud" class="hud-card hidden">
+          <div id="enemy-name" class="hud-name">⚔ SOLDIER</div>
+          <div id="enemy-hearts" class="hud-hearts">❤️❤️</div>
+        </div>
+      </div>
+
+      <!-- Main Menu UI -->
+      <div id="main-menu-ui" class="ui-layer active">
+        <div class="menu-title-container">
+          <h1 class="menu-title">🏰 CONDITIONAL KINGDOM</h1>
+          <p class="menu-subtitle">Knowledge is the Strongest Magic</p>
+        </div>
+        <div class="menu-buttons">
+          <button id="btn-play" class="btn-medieval">▶ PLAY</button>
+          <button id="btn-book" class="btn-medieval">📖 KNOWLEDGE BOOK</button>
+          <button id="btn-glossary" class="btn-medieval">📜 GLOSSARY</button>
+        </div>
+      </div>
+
+      <!-- Story Intro Scroll -->
+      <div id="intro-overlay" class="parchment-overlay hidden">
+        <div class="parchment-box intro-scroll-box">
+          <div class="parchment-header">📜 ANCIENT CHRONICLES</div>
+          <div id="intro-text" class="intro-text-page">
+            Long ago, the Kingdom of Conditionals was a land of wisdom and magic.
+          </div>
+          <div class="intro-nav">
+            <button id="btn-intro-skip" class="btn-medieval">SKIP</button>
+            <button id="btn-intro-next" class="btn-medieval">NEXT ➔</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Knowledge Book Overlay -->
+      <div id="knowledge-book-overlay" class="parchment-overlay hidden">
+        <div class="parchment-box">
+          <button id="btn-close-kb" class="parchment-close">&times;</button>
+          <div class="parchment-header">📖 KNOWLEDGE BOOK</div>
+          <div class="parchment-content">
+            <div class="kb-section">
+              <h3>ZERO CONDITIONAL</h3>
+              <p>Used for universal facts, scientific rules, and general truths.</p>
+              <div class="formula">If + Present Simple, Present Simple</div>
+              <ul>
+                <li>If plants do not get water, they die.</li>
+                <li>If people exercise regularly, they feel healthier.</li>
+                <li>If you mix blue and yellow, you get green.</li>
+              </ul>
+            </div>
+            <div class="kb-section">
+              <h3>FIRST CONDITIONAL</h3>
+              <p>Used for real or likely future possibilities and predictions.</p>
+              <div class="formula">If + Present Simple, Will + Verb</div>
+              <ul>
+                <li>If I finish my homework, I will watch a movie.</li>
+                <li>If we leave early, we will arrive on time.</li>
+                <li>If you practice speaking, you will improve your English.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Glossary Overlay -->
+      <div id="glossary-overlay" class="parchment-overlay hidden">
+        <div class="parchment-box">
+          <button id="btn-close-glossary" class="parchment-close">&times;</button>
+          <div class="parchment-header">📜 GLOSSARY OF KINGDOM HEROES & FOES</div>
+          <div class="parchment-content">
+            <div class="glossary-grid">
+              <div class="glossary-card">
+                <h4>🧙 ALDRIC</h4>
+                <div class="role">The Last Wizard</div>
+                <p>Uses ancient grammar magic to battle darkness. Equipped with a Magic Staff. (Health: ❤️❤️❤️)</p>
+              </div>
+              <div class="glossary-card">
+                <h4>👸 SOPHIA</h4>
+                <div class="role">Guardian of Knowledge</div>
+                <p>Protector of wisdom and truth in Conditional Kingdom. Kidnapped by Lord Grammar's dragon.</p>
+              </div>
+              <div class="glossary-card">
+                <h4>⚔ SOLDIER</h4>
+                <div class="role">Enemy Melee Guard</div>
+                <p>Armored foot soldier wielding a heavy iron sword. (Health: ❤️❤️)</p>
+              </div>
+              <div class="glossary-card">
+                <h4>🏹 ARCHER</h4>
+                <div class="role">Ranged Vanguard</div>
+                <p>Deadly bowman striking from distance with arrows. (Health: ❤️)</p>
+              </div>
+              <div class="glossary-card">
+                <h4>🐉 DRAGON</h4>
+                <div class="role">Drawbridge Guardian</div>
+                <p>Massive crimson beast breathing devastating fire. (Health: ❤️❤️❤️)</p>
+              </div>
+              <div class="glossary-card">
+                <h4>👑 LORD GRAMMAR</h4>
+                <div class="role">Dark Sorcerer</div>
+                <p>Master of dark arts holding the kingdom in fear. Feeds on grammar mistakes. (Health: ❤️❤️❤️❤️❤️)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pause Menu Overlay -->
+      <div id="pause-overlay" class="parchment-overlay hidden">
+        <div class="parchment-box" style="width: 450px; height: 420px; text-align: center;">
+          <div class="parchment-header">⏸ PAUSED</div>
+          <div style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+            <button id="btn-pause-resume" class="btn-medieval">Resume Adventure</button>
+            <button id="btn-pause-kb" class="btn-medieval">Knowledge Book</button>
+            <button id="btn-pause-menu" class="btn-medieval">Return to Main Menu</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over Overlay -->
+      <div id="gameover-overlay" class="parchment-overlay hidden">
+        <div class="parchment-box" style="width: 500px; height: 380px; text-align: center; border-color: #8b0000;">
+          <div class="parchment-header" style="color: #8b0000;">💀 GAME OVER</div>
+          <p id="gameover-reason" style="margin-bottom:30px; font-size:18px;">Aldric was overwhelmed by dark forces...</p>
+          <div style="display:flex; flex-direction:column; gap:15px;">
+            <button id="btn-go-restart" class="btn-medieval">TRY AGAIN</button>
+            <button id="btn-go-menu" class="btn-medieval">Return to Main Menu</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dialogue Banner -->
+      <div id="dialogue-banner" class="hidden">
+        <div id="db-speaker" class="db-speaker">SOPHIA</div>
+        <div id="db-text" class="db-text">Zero Conditional is used for facts...</div>
+        <button id="btn-db-next" class="btn-medieval db-next-btn">CONTINUE ➔</button>
+      </div>
+
+      <!-- Combat Question Panel -->
+      <div id="question-panel" class="hidden">
+        <div class="qp-header">
+          <div id="qp-category" class="qp-category">ZERO CONDITIONAL SPELL</div>
+          <button id="btn-qp-book" class="btn-medieval qp-book-btn">📖 KNOWLEDGE BOOK</button>
+        </div>
+        <div id="qp-prompt" class="qp-prompt">If you heat water to 100°C, it _______.</div>
+        <div id="qp-options" class="qp-options">
+          <button class="btn-option" data-opt="0">boils</button>
+          <button class="btn-option" data-opt="1">will boil</button>
+          <button class="btn-option" data-opt="2">boiled</button>
+        </div>
+      </div>
+
+      <!-- Final Victory Screen -->
+      <div id="final-screen" class="ui-layer hidden">
+        <div class="final-card">
+          <h1 class="final-title">CONDITIONAL KINGDOM</h1>
+          <h2 class="final-subtitle">THE END</h2>
+          <div class="final-hearts">Aldric ❤️ Sophia</div>
+          <p class="final-quote">
+            "Knowledge is the strongest magic.<br>
+            Every lesson learned makes you stronger.<br>
+            Never stop learning. Never stop growing.<br>
+            Your future is yours to create."
+          </p>
+          <button id="btn-final-menu" class="btn-medieval">RETURN TO MAIN MENU</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       GAME ENGINE & LOGIC SCRIPT
+       ========================================================================== -->
+  <script>
+    /* ==========================================================================
+       1. ASSET MANAGER (Loading PNG Characters and JPG Backgrounds)
+       ========================================================================== */
+    class SpriteManager {
+      constructor() {
+        this.sprites = {};
+        this.loadedCount = 0;
+        this.totalCount = 9;
+        this.isReady = false;
+        this.hasError = false;
+        this.errorMessage = '';
+
+        this.assetPaths = {
+          aldric: 'assets/aldric.png',
+          sophia: 'assets/sophia.png',
+          soldier: 'assets/soldier.png',
+          archer: 'assets/archer.png',
+          dragon: 'assets/dragon.png',
+          lord_grammar: 'assets/lord_grammar.png',
+          village_bg: 'assets/village_background.jpg',
+          drawbridge_bg: 'assets/drawbridge_background.jpg',
+          castle_bg: 'assets/castle_background.jpg'
+        };
+
+        this.loadAll();
+      }
+
+      loadAll() {
+        Object.keys(this.assetPaths).forEach(key => {
+          const img = new Image();
+          img.onload = () => {
+            this.sprites[key] = img;
+            this.loadedCount++;
+            if (this.loadedCount === this.totalCount) {
+              this.isReady = true;
+            }
+          };
+          img.onerror = () => {
+            this.hasError = true;
+            this.errorMessage = `Asset loading error: Could not load image from ${this.assetPaths[key]}`;
+            console.error(this.errorMessage);
+          };
+          img.src = this.assetPaths[key];
+        });
+      }
+
+      get(key) {
+        return this.sprites[key];
+      }
+    }
+    const spriteManager = new SpriteManager();
+
+    /* ==========================================================================
+       2. AUDIO SYNTHESIZER (Web Audio API)
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playSpell() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+      playHit() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(40, now + 0.2);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+      playRoar() {
+        if (!this.ctx) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+        const master = ctx.createGain();
+        master.gain.setValueAtTime(0.0001, now);
+        master.gain.exponentialRampToValueAtTime(0.24, now + 0.9);
+        master.gain.setValueAtTime(0.20, now + 1.5);
+        master.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
+        master.connect(ctx.destination);
+
+        const drone = ctx.createOscillator();
+        const droneGain = ctx.createGain();
+        const droneFilter = ctx.createBiquadFilter();
+        drone.type = 'sine';
+        drone.frequency.setValueAtTime(58, now);
+        drone.frequency.linearRampToValueAtTime(43, now + 3.0);
+        droneFilter.type = 'lowpass';
+        droneFilter.frequency.value = 150;
+        droneGain.gain.value = 0.9;
+        drone.connect(droneFilter); droneFilter.connect(droneGain); droneGain.connect(master);
+        drone.start(now); drone.stop(now + 3.25);
+
+        const tension = ctx.createOscillator();
+        const tensionGain = ctx.createGain();
+        tension.type = 'triangle';
+        tension.frequency.setValueAtTime(110, now + 0.2);
+        tension.frequency.exponentialRampToValueAtTime(220, now + 2.4);
+        tensionGain.gain.setValueAtTime(0.0001, now);
+        tensionGain.gain.linearRampToValueAtTime(0.12, now + 1.5);
+        tensionGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.1);
+        tension.connect(tensionGain); tensionGain.connect(master);
+        tension.start(now); tension.stop(now + 3.2);
+
+        const length = Math.floor(ctx.sampleRate * 3.0);
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) {
+          const t = i / ctx.sampleRate;
+          const swell = Math.sin(Math.PI * Math.min(1, t / 3));
+          data[i] = (Math.random() * 2 - 1) * swell * 0.7;
+        }
+        const noise = ctx.createBufferSource();
+        const filter = ctx.createBiquadFilter();
+        const noiseGain = ctx.createGain();
+        noise.buffer = buffer;
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(260, now);
+        filter.frequency.linearRampToValueAtTime(650, now + 1.8);
+        filter.frequency.linearRampToValueAtTime(180, now + 3.0);
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.linearRampToValueAtTime(0.09, now + 1.0);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+        noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(master);
+        noise.start(now); noise.stop(now + 3.05);
+      }
+      playVictory() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+          gain.gain.setValueAtTime(0.3, now + idx * 0.12);
+          gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.12 + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.12);
+          osc.stop(now + idx * 0.12 + 0.4);
+        });
+      }
+    }
+    const audio = new SoundEngine();
+
+    /* ==========================================================================
+       3. QUESTION BANK (100 Unique Grammar Questions)
+       ========================================================================== */
+    const QUESTION_BANK = [
+      { type: 'ZERO', q: "If you heat ice, it _______.", opts: ["melts", "will melt", "melted"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If it rains, the grass _______ wet.", opts: ["got", "gets", "will get"], a: 1, level: 1 },
+      { type: 'ZERO', q: "If you touch a fire, you _______ burned.", opts: ["get", "would get", "will get"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If people do not eat, they _______ hungry.", opts: ["will become", "became", "become"], a: 2, level: 1 },
+      { type: 'ZERO', q: "If you freeze water, it _______ solid.", opts: ["becomes", "became", "will become"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If babies are hungry, they _______.", opts: ["will cry", "cry", "cried"], a: 1, level: 1 },
+      { type: 'ZERO', q: "If you mix red and yellow, you _______ orange.", opts: ["get", "got", "will get"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If snow melts, it _______ water.", opts: ["turned into", "turns into", "will turn into"], a: 1, level: 1 },
+      { type: 'ZERO', q: "If the sun sets, night _______.", opts: ["falls", "fell", "will fall"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If you press this button, the engine _______.", opts: ["starts", "will start", "started"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If iron gets wet, it _______.", opts: ["will rust", "rusts", "rusted"], a: 1, level: 1 },
+      { type: 'ZERO', q: "If you drop a stone, it _______ down.", opts: ["falls", "fell", "will fall"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If you cross an international line, time _______.", opts: ["changed", "changes", "will change"], a: 1, level: 1 },
+      { type: 'ZERO', q: "If wood burns, it _______ ash.", opts: ["creates", "created", "will create"], a: 0, level: 1 },
+      { type: 'ZERO', q: "If you boil water, steam _______.", opts: ["rose", "will rise", "rises"], a: 2, level: 1 },
+      { type: 'FIRST', q: "If I study hard, I _______ the exam.", opts: ["pass", "will pass", "passed"], a: 1, level: 1 },
+      { type: 'FIRST', q: "If it rains tomorrow, we _______ indoors.", opts: ["stayed", "will stay", "stay"], a: 1, level: 1 },
+      { type: 'FIRST', q: "If she calls me, I _______ her the news.", opts: ["tell", "told", "will tell"], a: 2, level: 1 },
+      { type: 'FIRST', q: "If they arrive early, they _______ good seats.", opts: ["will get", "got", "get"], a: 0, level: 1 },
+      { type: 'FIRST', q: "If you help me, I _______ the work quickly.", opts: ["finish", "will finish", "finished"], a: 1, level: 1 },
+      { type: 'FIRST', q: "If he practices every day, he _______ a great wizard.", opts: ["will become", "became", "becomes"], a: 0, level: 1 },
+      { type: 'FIRST', q: "If we miss the bus, we _______ late.", opts: ["are", "will be", "were"], a: 1, level: 1 },
+      { type: 'FIRST', q: "If you eat that fruit, you _______ full.", opts: ["will feel", "feel", "felt"], a: 0, level: 1 },
+      { type: 'FIRST', q: "If I find your wand, I _______ it back.", opts: ["will bring", "brings", "brought"], a: 0, level: 1 },
+      { type: 'FIRST', q: "If the guard sleeps, we _______ past him.", opts: ["will sneak", "sneaked", "sneak"], a: 0, level: 1 },
+      { type: 'FIRST', q: "If she wins the race, she _______ a medal.", opts: ["receives", "will receive", "received"], a: 1, level: 1 },
+      { type: 'FIRST', q: "If you leave now, you _______ the train.", opts: ["catch", "will catch", "caught"], a: 1, level: 1 },
+      { type: 'FIRST', q: "If the sun shines, we _______ to the castle.", opts: ["walked", "will walk", "walk"], a: 1, level: 1 },
+      { type: 'FIRST', q: "If I see Lord Grammar, I _______ him.", opts: ["will fight", "fought", "fights"], a: 0, level: 1 },
+      { type: 'FIRST', q: "If you read the spellbook, you _______ new magic.", opts: ["learn", "will learn", "learned"], a: 1, level: 1 },
+      { type: 'ZERO', q: "If an object is denser than water, it _______.", opts: ["will sink", "sinks", "sank"], a: 1, level: 2 },
+      { type: 'ZERO', q: "If you do not sleep, your body _______ weak.", opts: ["feels", "felt", "will feel"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If light passes through a prism, it _______ into colors.", opts: ["split", "splits", "will split"], a: 1, level: 2 },
+      { type: 'ZERO', q: "If food is left out in the heat, it _______ quickly.", opts: ["spoiled", "spoils", "will spoil"], a: 1, level: 2 },
+      { type: 'ZERO', q: "If you heat sugar, it _______ into caramel.", opts: ["turns", "will turn", "turned"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If plants do not get sunlight, they _______ grow.", opts: ["will not", "cannot", "do not"], a: 2, level: 2 },
+      { type: 'ZERO', q: "If magnet poles are opposite, they _______ each other.", opts: ["attract", "attracted", "will attract"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If wind blows hard, ocean waves _______ larger.", opts: ["get", "got", "will get"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If you mix red and blue, you _______ purple.", opts: ["get", "will get", "got"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If a dragon breathes flame, air temperature _______ rapidly.", opts: ["rises", "rose", "will rise"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If lightning strikes metal, electricity _______ through it.", opts: ["flows", "flowed", "will flow"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If you combine hydrogen and oxygen, you _______ water.", opts: ["created", "create", "will create"], a: 1, level: 2 },
+      { type: 'ZERO', q: "If clouds get too heavy with moisture, it _______.", opts: ["rains", "rained", "will rain"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If you strike steel against flint, sparks _______.", opts: ["fly", "flew", "will fly"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If animal temperature drops too low, hypothermia _______.", opts: ["occurs", "occurred", "will occur"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If the dragon _______ fire, Aldric will shield himself.", opts: ["breathes", "breathed", "will breathe"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If we _______ the bridge, we will reach the fortress.", opts: ["crossed", "cross", "will cross"], a: 1, level: 2 },
+      { type: 'FIRST', q: "Aldric _______ the spell if he remembers the words.", opts: ["casts", "will cast", "casted"], a: 1, level: 2 },
+      { type: 'FIRST', q: "If the wind grows stronger, the fire _______ rapidly.", opts: ["will spread", "spreads", "spread"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If you _______ carefully, you will hear the dragon.", opts: ["listen", "will listen", "listened"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If Sophia _______ the cage key, she will escape.", opts: ["finds", "found", "will find"], a: 0, level: 2 },
+      { type: 'FIRST', q: "They _______ the kingdom if they defeat Lord Grammar.", opts: ["saved", "will save", "saves"], a: 1, level: 2 },
+      { type: 'FIRST', q: "If you do not wear armor, the enemy _______ you.", opts: ["will hurt", "hurts", "hurt"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If night falls before we arrive, we _______ torches.", opts: ["will need", "need", "needed"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If the river overflows, the drawbridge _______ inaccessible.", opts: ["will become", "becomes", "became"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If the wizard _______ his staff, the spell will break.", opts: ["drops", "will drop", "dropped"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If we _______ fast enough, we will save Sophia in time.", opts: ["run", "will run", "ran"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If the archer misses, Aldric _______ to strike back.", opts: ["will advance", "advances", "advanced"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If the dragon wings flap, a powerful breeze _______.", opts: ["will blow", "blows", "blew"], a: 0, level: 2 },
+      { type: 'FIRST', q: "If you _______ the magic words, the door will open.", opts: ["recite", "will recite", "recited"], a: 0, level: 2 },
+      { type: 'ZERO', q: "If ancient dark magic _______ active, light spells weaken.", opts: ["is", "will be", "was"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If a wizard _______ composure, magical concentration vanishes.", opts: ["loses", "will lose", "lost"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If grammar rules _______ improperly applied, spells fail completely.", opts: ["are", "will be", "were"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If pressure in a closed container _______, the container bursts.", opts: ["increases", "will increase", "increased"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If pure gold _______ heated to 1064°C, it melts.", opts: ["is", "will be", "was"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If dark energy _______ light particles, total void occurs.", opts: ["absorbs", "will absorb", "absorbed"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If a scholar _______ ancient runes, knowledge unlocks naturally.", opts: ["deciphers", "will decipher", "deciphered"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If sulfur burns in oxygen, sulfur dioxide _______.", opts: ["forms", "formed", "will form"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If sound travels through a vacuum, no acoustic waves _______.", opts: ["propagate", "propagated", "will propagate"], a: 0, level: 3 },
+      { type: 'ZERO', q: "If dark sorcery _______ truth, illusions shatter instantly.", opts: ["confronts", "will confront", "confronted"], a: 0, level: 3 },
+      { type: 'FIRST', q: "Unless Lord Grammar _______ his staff, his barrier will remain intact.", opts: ["shatters", "will shatter", "shattered"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If Aldric _______ the core incantation, Grammar Castle will crumble.", opts: ["recites", "will recite", "recited"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If you make two mistakes, Lord Grammar _______ one life point.", opts: ["will recover", "recovers", "recovered"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If the dark sorcerer _______ his ritual, darkness will engulf the realm.", opts: ["completes", "will complete", "completed"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If we _______ all answers correctly, Sophia will be freed from her cage.", opts: ["provide", "will provide", "provided"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If the ancient runes _______ bright, the portal will seal itself.", opts: ["glow", "will glow", "glowed"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If Aldric _______ his magic staff, he will lose his defensive power.", opts: ["drops", "will drop", "dropped"], a: 0, level: 3 },
+      { type: 'FIRST', q: "Lord Grammar _______ stronger if your grammar skills waver.", opts: ["will grow", "grows", "grew"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If the barrier falls, Sophia _______ out of the dark hall.", opts: ["will step", "steps", "stepped"], a: 0, level: 3 },
+      { type: 'FIRST', q: "If we _______ the dragon on the drawbridge, the castle gates will open.", opts: ["vanquish", "will vanquish", "vanquished"], a: 0, level: 3 }
+    ];
+
+    /* ==========================================================================
+       4. STORY INTRO PAGES
+       ========================================================================== */
+    const INTRO_PAGES = [
+      "Long ago, the Kingdom of Conditionals was full of magic and knowledge.",
+      "The people learned Zero Conditional and First Conditional.",
+      "But dark times came.",
+      "Lord Grammar attacked the kingdom.",
+      "His army took the villages.",
+      "His dragon took the big bridge to the castle.",
+      "The people became afraid.",
+      "Only one wizard is left."
+    ];
+
+    /* ==========================================================================
+       5. GAME ENGINE CLASS
+       ========================================================================== */
+    class GameEngine {
+      constructor() {
+        this.canvas = document.getElementById('canvas-layer');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.state = 'MENU';
+        this.currentZone = 1; // 1: Village, 2: Drawbridge, 3: Castle
+
+        // GROUND SYSTEM
+        this.groundYVillage = 575;
+        this.groundYBridge = 520;
+        this.groundYCastle = 575;
+
+        // FIXED COMBAT POSITIONS
+        this.COMBAT_ALDRIC_X = 470;
+        this.COMBAT_ENEMY_X = 820;
+
+        // UNIFORM SPEED
+        this.UNIFORM_SPEED = 4.0;
+
+        this.aldric = { x: 120, y: this.groundYVillage, lives: 3, maxLives: 3, state: 'IDLE', frame: 0 };
+        this.sophia = { x: 300, y: this.groundYVillage, state: 'NORMAL', inCage: false, visible: true };
+        this.dragon = { x: 1400, y: 220, lives: 3, maxLives: 3, state: 'HIDDEN' };
+        this.enemy = null;
+
+        this.lordGrammarDefeated = false;
+
+        this.villageEnemies = [
+          { name: '⚔ SOLDIER', type: 'SOLDIER', lives: 2, maxLives: 2, spriteKey: 'soldier' },
+          { name: '🏹 ARCHER', type: 'ARCHER', lives: 1, maxLives: 1, spriteKey: 'archer' },
+          { name: '⚔ SOLDIER', type: 'SOLDIER', lives: 2, maxLives: 2, spriteKey: 'soldier' },
+          { name: '🏹 ARCHER', type: 'ARCHER', lives: 1, maxLives: 1, spriteKey: 'archer' },
+          { name: '⚔ SOLDIER', type: 'SOLDIER', lives: 2, maxLives: 2, spriteKey: 'soldier' }
+        ];
+        this.villageEnemyIndex = 0;
+        this.grammarErrors = 0;
+
+        this.worldX = 0;
+        this.isMovingForward = false;
+
+        // Zone transition state
+        this.isTransitioningZone = false;
+        this.transitionProgress = 0;
+        this.fromZone = 1;
+        this.toZone = 2;
+
+        this.introPageIndex = 0;
+        this.storyStep = 'TUTORIAL';
+        this.checkpoint = null;
+        this.approachingEnemy = null;
+        this.dialogueQueue = [];
+        this.dialogueCallback = null;
+
+        this.projectiles = [];
+        this.particles = [];
+
+        this.usedQuestionIndices = new Set();
+        this.currentQuestion = null;
+
+        this.lastTime = performance.now();
+        this.bindEvents();
+      }
+
+      getGroundY(zone) {
+        if (zone === 2) return this.groundYBridge;
+        if (zone === 3) return this.groundYCastle;
+        return this.groundYVillage;
+      }
+
+      resetGame() {
+        this.state = 'PLAYING';
+        this.currentZone = 1;
+        this.worldX = 0;
+        this.isMovingForward = false;
+        this.isTransitioningZone = false;
+        this.lordGrammarDefeated = false;
+
+        const gY = this.getGroundY(1);
+        this.aldric = { x: 120, y: gY, lives: 3, maxLives: 3, state: 'IDLE', frame: 0 };
+        this.sophia = { x: 300, y: gY, state: 'NORMAL', inCage: false, visible: true };
+        this.dragon = { x: 1400, y: 220, lives: 3, maxLives: 3, state: 'HIDDEN' };
+
+        this.villageEnemyIndex = 0;
+        this.enemy = null;
+        this.grammarErrors = 0;
+
+        this.projectiles = [];
+        this.particles = [];
+        this.usedQuestionIndices.clear();
+
+        this.storyStep = 'TUTORIAL';
+        this.checkpoint = null;
+        this.approachingEnemy = null;
+        this.hideAllOverlays();
+        this.updateHUD();
+
+        this.startInitialConversation();
+      }
+
+      saveCheckpoint(enemyObj) {
+        this.checkpoint = {
+          currentZone: this.currentZone,
+          worldX: this.worldX,
+          villageEnemyIndex: this.villageEnemyIndex,
+          enemyData: {
+            name: enemyObj.name,
+            type: enemyObj.type,
+            spriteKey: enemyObj.spriteKey,
+            lives: enemyObj.maxLives,
+            maxLives: enemyObj.maxLives
+          }
+        };
+      }
+
+      restoreCheckpoint() {
+        document.getElementById('gameover-overlay').classList.add('hidden');
+
+        if (!this.checkpoint) {
+          this.resetGame();
+          return;
+        }
+
+        const cp = this.checkpoint;
+        this.currentZone = cp.currentZone;
+        this.worldX = cp.worldX;
+        this.villageEnemyIndex = cp.villageEnemyIndex;
+        const gY = this.getGroundY(this.currentZone);
+
+        this.aldric = { x: 120, y: gY, lives: 3, maxLives: 3, state: 'IDLE', frame: 0 };
+        this.enemy = null;
+        this.approachingEnemy = null;
+        this.isMovingForward = true;
+        this.isTransitioningZone = false;
+        this.projectiles = [];
+        this.particles = [];
+        this.grammarErrors = 0;
+        this.state = 'PLAYING';
+        this.hideAllOverlays();
+        document.getElementById('question-panel').classList.add('hidden');
+        document.getElementById('enemy-hud').classList.add('hidden');
+        this.updateHUD();
+
+        const restoredEnemy = {
+          name: cp.enemyData.name,
+          type: cp.enemyData.type,
+          spriteKey: cp.enemyData.spriteKey,
+          lives: cp.enemyData.maxLives,
+          maxLives: cp.enemyData.maxLives,
+          x: 1100,
+          y: gY
+        };
+
+        this.approachingEnemy = restoredEnemy;
+      }
+
+      hideAllOverlays() {
+        document.querySelectorAll('.ui-layer, .parchment-overlay, #dialogue-banner, #question-panel')
+          .forEach(el => el.classList.add('hidden'));
+        document.getElementById('hud-layer').classList.remove('hidden');
+      }
+
+      bindEvents() {
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            this.togglePause();
+            return;
+          }
+          // ATAJO SECRETO PARA VIDEO (Presionar 'K' durante combate)
+          if ((e.key === 'k' || e.key === 'K') && this.state === 'COMBAT') {
+            const password = prompt("Introduce la contraseña de desarrollador (7890):");
+            if (password === "7890") {
+              this.forceVictoryCurrentEnemy();
+            } else if (password !== null) {
+              alert("Contraseña incorrecta.");
+            }
+          }
+        });
+
+        document.getElementById('btn-play').onclick = () => {
+          audio.init();
+          document.getElementById('main-menu-ui').classList.add('hidden');
+          this.showIntroScroll();
+        };
+        document.getElementById('btn-book').onclick = () => {
+          audio.init();
+          document.getElementById('knowledge-book-overlay').classList.remove('hidden');
+        };
+        document.getElementById('btn-close-kb').onclick = () => {
+          document.getElementById('knowledge-book-overlay').classList.add('hidden');
+        };
+        document.getElementById('btn-glossary').onclick = () => {
+          audio.init();
+          document.getElementById('glossary-overlay').classList.remove('hidden');
+        };
+        document.getElementById('btn-close-glossary').onclick = () => {
+          document.getElementById('glossary-overlay').classList.add('hidden');
+        };
+
+        document.getElementById('btn-intro-next').onclick = () => {
+          this.introPageIndex++;
+          if (this.introPageIndex < INTRO_PAGES.length) {
+            document.getElementById('intro-text').innerText = INTRO_PAGES[this.introPageIndex];
+          } else {
+            document.getElementById('intro-overlay').classList.add('hidden');
+            this.resetGame();
+          }
+        };
+        document.getElementById('btn-intro-skip').onclick = () => {
+          document.getElementById('intro-overlay').classList.add('hidden');
+          this.resetGame();
+        };
+
+        document.getElementById('btn-pause-resume').onclick = () => this.togglePause();
+        document.getElementById('btn-pause-kb').onclick = () => {
+          document.getElementById('knowledge-book-overlay').classList.remove('hidden');
+        };
+        document.getElementById('btn-pause-menu').onclick = () => {
+          this.state = 'MENU';
+          this.hideAllOverlays();
+          document.getElementById('main-menu-ui').classList.remove('hidden');
+        };
+
+        document.getElementById('btn-go-restart').onclick = () => this.restoreCheckpoint();
+        document.getElementById('btn-go-menu').onclick = () => {
+          this.state = 'MENU';
+          this.hideAllOverlays();
+          document.getElementById('main-menu-ui').classList.remove('hidden');
+        };
+
+        const btnFinalMenu = document.getElementById('btn-final-menu');
+        if (btnFinalMenu) {
+          btnFinalMenu.onclick = () => {
+            this.state = 'MENU';
+            this.hideAllOverlays();
+            document.getElementById('final-screen').classList.add('hidden');
+            document.getElementById('main-menu-ui').classList.remove('hidden');
+          };
+        }
+
+        document.getElementById('btn-db-next').onclick = () => this.advanceDialogue();
+
+        document.getElementById('btn-qp-book').onclick = () => {
+          document.getElementById('knowledge-book-overlay').classList.remove('hidden');
+        };
+
+        const optBtns = document.querySelectorAll('#qp-options .btn-option');
+        optBtns.forEach(btn => {
+          btn.onclick = (e) => {
+            const chosenIndex = parseInt(e.target.getAttribute('data-opt'), 10);
+            this.handleAnswer(chosenIndex);
+          };
+        });
+      }
+
+      // FUNCIÓN PARA DERROTAR AL ENEMIGO ACTUAL AUTOMÁTICAMENTE CON CONTRASEÑA
+      forceVictoryCurrentEnemy() {
+        if (!this.enemy) return;
+        this.enemy.lives = 1; // Lo deja a 1 vida para activar el golpe final
+        audio.playSpell();
+        this.aldric.state = 'CASTING';
+
+        this.projectiles.push({
+          x: this.aldric.x + 60,
+          y: this.aldric.y - 70,
+          targetX: this.enemy.x,
+          targetY: this.enemy.y - 70,
+          speed: 18,
+          color: '#00ffff',
+          isFinisher: true
+        });
+
+        setTimeout(() => { this.aldric.state = 'IDLE'; }, 400);
+      }
+
+      showIntroScroll() {
+        this.state = 'INTRO';
+        this.introPageIndex = 0;
+        document.getElementById('intro-text').innerText = INTRO_PAGES[0];
+        document.getElementById('intro-overlay').classList.remove('hidden');
+      }
+
+      togglePause() {
+        if (this.state === 'PLAYING' || this.state === 'COMBAT') {
+          this.previousState = this.state;
+          this.state = 'PAUSED';
+          document.getElementById('pause-overlay').classList.remove('hidden');
+        } else if (this.state === 'PAUSED') {
+          this.state = this.previousState;
+          document.getElementById('pause-overlay').classList.add('hidden');
+        }
+      }
+
+      showDialogue(speaker, text, callback = null) {
+        this.dialogueQueue.push({ speaker, text, callback });
+        if (document.getElementById('dialogue-banner').classList.contains('hidden')) {
+          this.advanceDialogue();
+        }
+      }
+
+      advanceDialogue() {
+        if (this.dialogueQueue.length > 0) {
+          const item = this.dialogueQueue.shift();
+          document.getElementById('db-speaker').innerText = item.speaker;
+          document.getElementById('db-text').innerText = item.text;
+          document.getElementById('dialogue-banner').classList.remove('hidden');
+          this.dialogueCallback = item.callback;
+        } else {
+          document.getElementById('dialogue-banner').classList.add('hidden');
+          if (this.dialogueCallback) {
+            const cb = this.dialogueCallback;
+            this.dialogueCallback = null;
+            cb();
+          }
+        }
+      }
+
+      startInitialConversation() {
+        this.showDialogue('👸 SOPHIA', "Aldric, thank you for coming.");
+        this.showDialogue('🧙 ALDRIC', "Of course. Are you alright?");
+        this.showDialogue('👸 SOPHIA', "Not really. I am worried about the kingdom.");
+        this.showDialogue('🧙 ALDRIC', "Don't worry. I will protect it.");
+        this.showDialogue('👸 SOPHIA', "You always say that.");
+        this.showDialogue('🧙 ALDRIC', "Because it is true.");
+        this.showDialogue('👸 SOPHIA', "You are a good wizard, Aldric.");
+        this.showDialogue('🧙 ALDRIC', "And you are a good friend, Sophia.", () => {
+          this.triggerDragonKidnapping();
+        });
+      }
+
+      triggerDragonKidnapping() {
+        this.state = 'CUTSCENE';
+        
+        audio.playRoar();
+
+        this.showDialogue('👸 SOPHIA', "What was that?!", () => {
+          this.showDialogue('🧙 ALDRIC', "Stay behind me!", () => {
+            audio.playSpell();
+            this.sophia.inCage = true;
+            this.spawnImpactParticles(this.sophia.x, this.sophia.y - 60, '#f1c40f');
+
+            this.showDialogue('👸 SOPHIA', "Aldric! Help me!", () => {
+              this.dragon.state = 'ENTERING';
+              this.dragon.x = 1280;
+              this.dragon.y = 100;
+              
+              const groundY = this.getGroundY(1);
+              const targetDragonX = this.sophia.x + 80;
+              const targetDragonY = groundY;
+
+              const flyDownInterval = setInterval(() => {
+                let arrivedX = false;
+                let arrivedY = false;
+
+                if (this.dragon.x > targetDragonX) {
+                  this.dragon.x -= 14;
+                } else {
+                  arrivedX = true;
+                }
+
+                if (this.dragon.y < targetDragonY) {
+                  this.dragon.y += 8;
+                } else {
+                  arrivedY = true;
+                }
+
+                if (arrivedX && arrivedY) {
+                  clearInterval(flyDownInterval);
+                  
+                  audio.playRoar();
+                  this.dragon.state = 'GRABBING';
+                  this.spawnFireParticles(this.dragon.x, this.dragon.y - 40);
+
+                  setTimeout(() => {
+                    audio.playRoar();
+                    this.dragon.state = 'LEAVING';
+                    
+                    const escapeInterval = setInterval(() => {
+                      this.dragon.x += 12;
+                      this.dragon.y -= 7;
+                      
+                      this.sophia.x = this.dragon.x - 30;
+                      this.sophia.y = this.dragon.y + 60;
+
+                      if (this.dragon.x > 1400 || this.dragon.y < -100) {
+                        clearInterval(escapeInterval);
+                        this.sophia.visible = false;
+                        this.dragon.state = 'HIDDEN';
+
+                        this.showDialogue('👸 SOPHIA', "Do not give up!");
+                        this.showDialogue('👸 SOPHIA', "You can save the kingdom!");
+                        this.showDialogue('👸 SOPHIA', "I believe in you!");
+                        this.showDialogue('🧙 ALDRIC', "I will find you.");
+                        this.showDialogue('🧙 ALDRIC', "I promise.", () => {
+                          this.storyStep = 'ADVENTURE';
+                          this.state = 'PLAYING';
+                          this.isMovingForward = true;
+                        });
+                      }
+                    }, 30);
+                  }, 800);
+                }
+              }, 30);
+            });
+          });
+        });
+      }
+
+      startCombat(enemyObj) {
+        if (this.lordGrammarDefeated) return;
+
+        this.isMovingForward = false;
+        this.approachingEnemy = null;
+        this.state = 'COMBAT';
+
+        this.saveCheckpoint(enemyObj);
+
+        this.aldric.x = this.COMBAT_ALDRIC_X;
+        this.enemy = enemyObj;
+        this.enemy.x = this.COMBAT_ENEMY_X;
+
+        const gY = this.getGroundY(this.currentZone);
+        this.aldric.y = gY;
+        this.enemy.y = gY;
+
+        this.aldric.state = 'IDLE';
+        this.updateHUD();
+
+        document.getElementById('enemy-hud').classList.remove('hidden');
+        document.getElementById('question-panel').classList.remove('hidden');
+
+        this.presentNextQuestion();
+      }
+
+      presentNextQuestion() {
+        let diffLevel = 1;
+        if (this.currentZone === 2) diffLevel = 2;
+        if (this.currentZone === 3) diffLevel = 3;
+
+        let candidates = QUESTION_BANK.filter((q, idx) => !this.usedQuestionIndices.has(idx) && q.level === diffLevel);
+        if (candidates.length === 0) {
+          candidates = QUESTION_BANK.filter((q, idx) => !this.usedQuestionIndices.has(idx));
+        }
+        if (candidates.length === 0) {
+          this.usedQuestionIndices.clear();
+          candidates = QUESTION_BANK;
+        }
+
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        const originalIndex = QUESTION_BANK.indexOf(chosen);
+        this.usedQuestionIndices.add(originalIndex);
+        this.currentQuestion = chosen;
+
+        document.getElementById('qp-category').innerText = `${chosen.type} CONDITIONAL SPELL`;
+        document.getElementById('qp-prompt').innerText = chosen.q;
+
+        let shuffledOpts = chosen.opts.map((text, idx) => ({ text, originalIdx: idx }));
+        shuffledOpts.sort(() => Math.random() - 0.5);
+
+        const btns = document.querySelectorAll('#qp-options .btn-option');
+        btns.forEach((btn, idx) => {
+          btn.innerText = shuffledOpts[idx].text;
+          btn.setAttribute('data-opt', shuffledOpts[idx].originalIdx);
+        });
+      }
+
+      handleAnswer(chosenIndex) {
+        if (this.state !== 'COMBAT') return;
+
+        if (chosenIndex === this.currentQuestion.a) {
+          audio.playSpell();
+          this.aldric.state = 'CASTING';
+
+          this.projectiles.push({
+            x: this.aldric.x + 60,
+            y: this.aldric.y - 70,
+            targetX: this.enemy.x,
+            targetY: this.enemy.y - 70,
+            speed: 18,
+            color: '#00ffff',
+            isFinisher: (this.enemy.lives === 1)
+          });
+
+          setTimeout(() => { this.aldric.state = 'IDLE'; }, 400);
+
+        } else {
+          audio.playHit();
+          this.aldric.lives--;
+          this.updateHUD();
+
+          if (this.enemy.type === 'GRAMMAR') {
+            this.grammarErrors++;
+            if (this.grammarErrors % 2 === 0 && this.enemy.lives < this.enemy.maxLives) {
+              this.enemy.lives++;
+              this.updateHUD();
+              this.showDialogue('👑 LORD GRAMMAR', "Your mistakes make me stronger!");
+            }
+          }
+
+          this.spawnEnemyAttackEffect();
+
+          if (this.aldric.lives <= 0) {
+            this.triggerHeroDeathSequence();
+          }
+        }
+      }
+
+      spawnEnemyAttackEffect() {
+        if (this.enemy.type === 'SOLDIER') {
+          this.spawnImpactParticles(this.aldric.x + 20, this.aldric.y - 60, '#ff3333');
+        } else if (this.enemy.type === 'ARCHER') {
+          this.projectiles.push({
+            x: this.enemy.x - 30, y: this.enemy.y - 60,
+            targetX: this.aldric.x, targetY: this.aldric.y - 60,
+            speed: 20, color: '#e67e22', isEnemy: true
+          });
+        } else if (this.enemy.type === 'DRAGON') {
+          audio.playRoar();
+          this.spawnFireParticles(this.aldric.x, this.aldric.y - 40);
+        } else if (this.enemy.type === 'GRAMMAR') {
+          this.spawnImpactParticles(this.aldric.x, this.aldric.y - 60, '#9b59b6');
+        }
+      }
+
+      onProjectileHit(p) {
+        if (p.isEnemy) {
+          this.aldric.state = 'HIT';
+          setTimeout(() => { if (this.aldric.lives > 0) this.aldric.state = 'IDLE'; }, 300);
+          return;
+        }
+
+        if (!this.enemy) {
+          audio.playVictory();
+          this.sophia.inCage = false;
+          this.spawnDisintegrationParticles(this.sophia.x, this.sophia.y - 60);
+          this.aldric.state = 'IDLE';
+
+          setTimeout(() => {
+            const walkToEachOther = setInterval(() => {
+              let reached = true;
+
+              if (this.aldric.x < 720) {
+                this.aldric.x += 2;
+                this.aldric.frame += 0.2;
+                reached = false;
+              }
+              if (this.sophia.x > 770) {
+                this.sophia.x -= 2;
+                reached = false;
+              }
+
+              if (reached) {
+                clearInterval(walkToEachOther);
+                this.aldric.state = 'IDLE';
+
+                const hugInterval = setInterval(() => {
+                  if (this.aldric.x < 740) this.aldric.x += 1;
+                  if (this.sophia.x > 755) this.sophia.x -= 1;
+
+                  if (this.aldric.x >= 740 && this.sophia.x <= 755) {
+                    clearInterval(hugInterval);
+
+                    this.spawnFloatingHeart(747, this.getGroundY(3) - 120);
+
+                    setTimeout(() => {
+                      document.getElementById('final-screen').classList.remove('hidden');
+                    }, 3500);
+                  }
+                }, 30);
+              }
+            }, 30);
+          }, 400);
+          return;
+        }
+
+        this.enemy.lives--;
+        this.updateHUD();
+        this.spawnImpactParticles(this.enemy.x, this.enemy.y - 60, p.isFinisher ? '#ffd700' : '#00ffff');
+
+        if (this.enemy.lives <= 0) {
+          audio.playVictory();
+          document.getElementById('question-panel').classList.add('hidden');
+          document.getElementById('enemy-hud').classList.add('hidden');
+
+          const defeatedType = this.enemy.type;
+          
+          if (defeatedType === 'GRAMMAR') {
+            this.lordGrammarDefeated = true;
+            
+            this.showDialogue('👑 LORD GRAMMAR', "NOOOOOOO!", () => {
+              this.spawnDisintegrationParticles(this.enemy.x, this.enemy.y - 60);
+              this.enemy = null;
+              this.approachingEnemy = null;
+              
+              setTimeout(() => {
+                this.triggerPostBattleRescueScene();
+              }, 800);
+            });
+          } else if (defeatedType === 'DRAGON') {
+            this.spawnDisintegrationParticles(this.enemy.x, this.enemy.y - 60);
+            this.enemy = null;
+            setTimeout(() => {
+              this.triggerZoneTransition(2, 3);
+            }, 800);
+          } else {
+            this.spawnDisintegrationParticles(this.enemy.x, this.enemy.y - 60);
+            this.enemy = null;
+            this.villageEnemyIndex++;
+            this.state = 'PLAYING';
+            this.isMovingForward = true;
+          }
+        } else {
+          this.presentNextQuestion();
+        }
+      }
+
+      triggerZoneTransition(fromZ, toZ) {
+        this.isTransitioningZone = true;
+        this.transitionProgress = 0;
+        this.fromZone = fromZ;
+        this.toZone = toZ;
+        this.state = 'PLAYING';
+        this.isMovingForward = false;
+        this.approachingEnemy = null;
+      }
+
+      triggerHeroDeathSequence() {
+        this.state = 'CUTSCENE';
+        document.getElementById('question-panel').classList.add('hidden');
+        document.getElementById('enemy-hud').classList.add('hidden');
+
+        let reasonText = "Aldric fell in battle.";
+
+        if (this.enemy.type === 'SOLDIER') {
+          reasonText = "The Soldier's blade struck Aldric down.";
+          this.aldric.state = 'DEATH';
+        } else if (this.enemy.type === 'ARCHER') {
+          reasonText = "An arrow pierced Aldric's armor.";
+          this.aldric.state = 'DEATH';
+        } else if (this.enemy.type === 'DRAGON') {
+          reasonText = "The Dragon's flame burned Aldric to ashes.";
+          this.aldric.state = 'DEATH';
+          this.spawnFireParticles(this.aldric.x, this.aldric.y - 40);
+        } else if (this.enemy.type === 'GRAMMAR') {
+          reasonText = "Lord Grammar shattered the castle floor into a dark abyss!";
+          this.aldric.state = 'FALLING';
+        }
+
+        setTimeout(() => {
+          document.getElementById('gameover-reason').innerText = reasonText;
+          document.getElementById('gameover-overlay').classList.remove('hidden');
+        }, 1200);
+      }
+
+      triggerPostBattleRescueScene() {
+        this.state = 'CUTSCENE';
+        this.enemy = null;
+        this.approachingEnemy = null;
+        
+        this.sophia.visible = true;
+        this.sophia.inCage = true;
+        this.sophia.x = 820;
+        this.sophia.y = this.getGroundY(3);
+
+        const walkInterval = setInterval(() => {
+          if (this.aldric.x < 650) {
+            this.aldric.x += 3;
+            this.aldric.frame += 0.2;
+          } else {
+            clearInterval(walkInterval);
+            this.aldric.state = 'IDLE';
+            this.startRescueDialogue();
+          }
+        }, 30);
+      }
+
+      startRescueDialogue() {
+        this.showDialogue('🧙 ALDRIC', "Sophia, I came to save you.");
+        this.showDialogue('👸 SOPHIA', "I knew you would come.");
+        this.showDialogue('🧙 ALDRIC', "The kingdom is safe now.");
+        this.showDialogue('👸 SOPHIA', "You never gave up.");
+        this.showDialogue('🧙 ALDRIC', "I could not leave you here.");
+        this.showDialogue('👸 SOPHIA', "You are the hero I need.", () => {
+          this.executeRescueAnimation();
+        });
+      }
+
+      executeRescueAnimation() {
+        audio.playSpell();
+        this.aldric.state = 'CASTING';
+
+        this.projectiles.push({
+          x: this.aldric.x + 60, y: this.aldric.y - 60,
+          targetX: this.sophia.x, targetY: this.sophia.y - 60,
+          speed: 15, color: '#ffd700'
+        });
+      }
+
+      updateHUD() {
+        document.getElementById('aldric-hearts').innerText = '❤️'.repeat(Math.max(0, this.aldric.lives));
+        if (this.enemy) {
+          document.getElementById('enemy-name').innerText = this.enemy.name;
+          document.getElementById('enemy-hearts').innerText = '❤️'.repeat(Math.max(0, this.enemy.lives));
+        }
+      }
+
+      spawnImpactParticles(x, y, color) {
+        for (let i = 0; i < 20; i++) {
+          this.particles.push({
+            x, y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+            life: 1.0, color, size: Math.random() * 6 + 2
+          });
+        }
+      }
+
+      spawnDisintegrationParticles(x, y) {
+        for (let i = 0; i < 50; i++) {
+          this.particles.push({
+            x, y, vx: (Math.random() - 0.5) * 14, vy: (Math.random() - 0.8) * 12,
+            life: 1.5, color: Math.random() > 0.5 ? '#f1c40f' : '#9b59b6',
+            size: Math.random() * 8 + 3
+          });
+        }
+      }
+
+      spawnFireParticles(x, y) {
+        for (let i = 0; i < 30; i++) {
+          this.particles.push({
+            x: x + (Math.random() - 0.5) * 60, y: y + (Math.random() - 0.5) * 40,
+            vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 6 - 2,
+            life: 1.0, color: '#e74c3c', size: Math.random() * 10 + 4
+          });
+        }
+      }
+
+      spawnFloatingHeart(x, y) {
+        this.particles.push({ x, y, vx: 0, vy: -1.2, life: 6.0, color: '#e84118', size: 28, isHeart: true });
+      }
+
+      updateParticles(dt) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx; p.y += p.vy; p.life -= dt;
+          if (p.life <= 0) this.particles.splice(i, 1);
+        }
+      }
+
+      updateProjectiles() {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+          const p = this.projectiles[i];
+          const dx = p.targetX - p.x;
+          const dy = p.targetY - p.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < p.speed) {
+            this.onProjectileHit(p);
+            this.projectiles.splice(i, 1);
+          } else {
+            p.x += (dx / dist) * p.speed;
+            p.y += (dy / dist) * p.speed;
+          }
+        }
+      }
+
+      update(dt) {
+        if (this.state === 'PAUSED' || this.state === 'MENU') return;
+
+        this.updateParticles(dt);
+        this.updateProjectiles();
+
+        const currentGroundY = this.getGroundY(this.currentZone);
+        this.aldric.y = currentGroundY;
+
+        if (this.isTransitioningZone) {
+          this.transitionProgress += dt * 0.5;
+          if (this.transitionProgress >= 1.0) {
+            this.isTransitioningZone = false;
+            this.transitionProgress = 0;
+            this.currentZone = this.toZone;
+            this.worldX = 0;
+            this.aldric.x = 120;
+            this.isMovingForward = true;
+
+            if (this.currentZone === 2) {
+              const dragonEnemy = {
+                name: '🐉 DRAGON', type: 'DRAGON', spriteKey: 'dragon',
+                lives: 3, maxLives: 3, x: 1100, y: this.getGroundY(2)
+              };
+              this.approachingEnemy = dragonEnemy;
+            } else if (this.currentZone === 3 && !this.lordGrammarDefeated) {
+              const grammarEnemy = {
+                name: '👑 LORD GRAMMAR', type: 'GRAMMAR', spriteKey: 'lord_grammar',
+                lives: 5, maxLives: 5, x: 1100, y: this.getGroundY(3)
+              };
+              this.approachingEnemy = grammarEnemy;
+            }
+          }
+          return;
+        }
+
+        if (this.state === 'PLAYING') {
+          if (this.approachingEnemy && !this.lordGrammarDefeated) {
+            let aldricArrived = false;
+            let enemyArrived = false;
+
+            if (this.aldric.x < this.COMBAT_ALDRIC_X) {
+              this.aldric.x = Math.min(this.COMBAT_ALDRIC_X, this.aldric.x + this.UNIFORM_SPEED);
+              this.aldric.frame += 0.2;
+            } else {
+              aldricArrived = true;
+            }
+
+            if (this.approachingEnemy.x > this.COMBAT_ENEMY_X) {
+              this.approachingEnemy.x = Math.max(this.COMBAT_ENEMY_X, this.approachingEnemy.x - this.UNIFORM_SPEED);
+            } else {
+              enemyArrived = true;
+            }
+
+            this.approachingEnemy.y = currentGroundY;
+
+            if (aldricArrived && enemyArrived) {
+              const foe = this.approachingEnemy;
+              this.state = 'DIALOGUE';
+              this.aldric.state = 'IDLE';
+
+              if (foe.type === 'DRAGON') audio.playRoar();
+
+              if (foe.type === 'GRAMMAR') {
+                this.showDialogue('👑 LORD GRAMMAR', 'So, Aldric...');
+                this.showDialogue('👑 LORD GRAMMAR', 'You defeated my army.');
+                this.showDialogue('👑 LORD GRAMMAR', 'But you cannot stop me.');
+                this.showDialogue('👑 LORD GRAMMAR', 'This kingdom will be mine.');
+                this.showDialogue('🧙 ALDRIC', 'I am not afraid.');
+                this.showDialogue('🧙 ALDRIC', 'I fight for the kingdom.');
+                this.showDialogue('🧙 ALDRIC', 'I fight for Sophia.');
+                this.showDialogue('🧙 ALDRIC', 'Your rule ends now.', () => this.startCombat(foe));
+              } else {
+                const lines = foe.type === 'SOLDIER'
+                  ? ['For Lord Grammar!', 'Stop right there!', 'You shall not pass!']
+                  : foe.type === 'ARCHER'
+                    ? ["By the Emperor's order!", 'Target spotted!', 'Stand down, wizard!']
+                    : foe.type === 'DRAGON' ? ['*ROOOAAARRR!', '*GGRRRRR!'] : [];
+                if (lines.length) this.showDialogue(foe.name, lines[Math.floor(Math.random() * lines.length)], () => this.startCombat(foe));
+                else this.startCombat(foe);
+              }
+            }
+          } else if (this.isMovingForward) {
+            this.worldX += 4;
+            this.aldric.frame += 0.2;
+
+            if (this.currentZone === 1) {
+              const enemyTriggerX = (this.villageEnemyIndex + 1) * 525;
+              if (this.villageEnemyIndex < this.villageEnemies.length && this.worldX >= enemyTriggerX) {
+                const enemyData = this.villageEnemies[this.villageEnemyIndex];
+                this.isMovingForward = false;
+                this.approachingEnemy = {
+                  name: enemyData.name, type: enemyData.type, spriteKey: enemyData.spriteKey,
+                  lives: enemyData.lives, maxLives: enemyData.maxLives,
+                  x: 1100, y: currentGroundY
+                };
+              } else if (this.worldX >= 3150) {
+                this.triggerZoneTransition(1, 2);
+              }
+            } else if (this.currentZone === 2 && this.worldX >= 1200) {
+              this.triggerZoneTransition(2, 3);
+            }
+          }
+        }
+      }
+
+      render() {
+        this.ctx.clearRect(0, 0, 1280, 720);
+
+        if (spriteManager.hasError) {
+          this.ctx.fillStyle = '#110505';
+          this.ctx.fillRect(0, 0, 1280, 720);
+          this.ctx.fillStyle = '#ff3333';
+          this.ctx.font = '28px Cinzel, Georgia, serif';
+          this.ctx.textAlign = 'center';
+          this.ctx.fillText(spriteManager.errorMessage, 640, 360);
+          this.ctx.font = '18px Cinzel, Georgia, serif';
+          this.ctx.fillStyle = '#f0e6d2';
+          this.ctx.fillText("Please verify that all required PNG and JPG asset files exist inside the 'assets/' folder.", 640, 410);
+          return;
+        }
+
+        if (this.isTransitioningZone) {
+          this.renderZoneTransition();
+        } else {
+          if (this.currentZone === 1) this.renderVillageBG();
+          else if (this.currentZone === 2) this.renderDrawbridgeBG();
+          else if (this.currentZone === 3) this.renderCastleBG();
+        }
+
+        if (this.sophia.visible) this.renderSophia(this.sophia.x, this.sophia.y);
+        if (this.dragon.state !== 'HIDDEN' && !this.enemy) this.renderDragon(this.dragon.x, this.dragon.y);
+
+        this.renderAldric(this.aldric.x, this.aldric.y);
+
+        if (this.enemy) this.renderEnemy(this.enemy);
+        else if (this.approachingEnemy && !this.lordGrammarDefeated) this.renderEnemy(this.approachingEnemy);
+
+        this.renderProjectiles();
+        this.renderParticles();
+      }
+
+      getBGKey(zone) {
+        if (zone === 2) return 'drawbridge_bg';
+        if (zone === 3) return 'castle_bg';
+        return 'village_bg';
+      }
+
+      renderZoneTransition() {
+        const ctx = this.ctx;
+        const fromBg = spriteManager.get(this.getBGKey(this.fromZone));
+        const toBg = spriteManager.get(this.getBGKey(this.toZone));
+
+        const offset = this.transitionProgress * 1280;
+
+        if (fromBg && fromBg.complete) {
+          ctx.drawImage(fromBg, -offset, 0, 1280, 720);
+        }
+        if (toBg && toBg.complete) {
+          ctx.drawImage(toBg, 1280 - offset, 0, 1280, 720);
+        }
+      }
+
+      renderVillageBG() {
+        const ctx = this.ctx;
+        const bg = spriteManager.get('village_bg');
+        if (bg && bg.complete) {
+          const x = -(this.worldX * 0.3) % 1280;
+          ctx.drawImage(bg, x, 0, 1280, 720);
+          ctx.drawImage(bg, x + 1280, 0, 1280, 720);
+        }
+      }
+
+      renderDrawbridgeBG() {
+        const ctx = this.ctx;
+        const bg = spriteManager.get('drawbridge_bg');
+        if (bg && bg.complete) {
+          const x = -(this.worldX * 0.3) % 1280;
+          ctx.drawImage(bg, x, 0, 1280, 720);
+          ctx.drawImage(bg, x + 1280, 0, 1280, 720);
+        }
+      }
+
+      renderCastleBG() {
+        const ctx = this.ctx;
+        const bg = spriteManager.get('castle_bg');
+        if (bg && bg.complete) {
+          const x = -(this.worldX * 0.3) % 1280;
+          ctx.drawImage(bg, x, 0, 1280, 720);
+          ctx.drawImage(bg, x + 1280, 0, 1280, 720);
+        }
+      }
+
+      renderAldric(x, y) {
+        const img = spriteManager.get('aldric');
+        if (!img || !img.complete) return;
+        const targetHeight = 150;
+        const ratio = img.naturalWidth / img.naturalHeight || 1;
+        const w = targetHeight * ratio;
+        const h = targetHeight;
+        const drawX = x - w / 2;
+        const drawY = y - h;
+        this.ctx.drawImage(img, drawX, drawY, w, h);
+      }
+
+      renderSophia(x, y) {
+        const img = spriteManager.get('sophia');
+        if (!img || !img.complete) return;
+        const targetHeight = 150;
+        const ratio = img.naturalWidth / img.naturalHeight || 1;
+        const w = targetHeight * ratio;
+        const h = targetHeight;
+        const drawX = x - w / 2;
+        const drawY = y - h;
+        this.ctx.drawImage(img, drawX, drawY, w, h);
+
+        if (this.sophia.inCage) {
+          this.ctx.strokeStyle = '#f1c40f'; this.ctx.lineWidth = 5;
+          this.ctx.strokeRect(drawX - 10, drawY - 15, w + 20, h + 20);
+          for (let i = drawX; i <= drawX + w; i += 20) {
+            this.ctx.beginPath(); this.ctx.moveTo(i, drawY - 15); this.ctx.lineTo(i, drawY + h + 5); this.ctx.stroke();
+          }
+        }
+      }
+
+      renderEnemy(enemy) {
+        const img = spriteManager.get(enemy.spriteKey);
+        if (!img || !img.complete) return;
+        const targetHeight = enemy.type === 'DRAGON' ? 180 : 150;
+        const ratio = img.naturalWidth / img.naturalHeight || 1;
+        const w = targetHeight * ratio;
+        const h = targetHeight;
+        const drawX = enemy.x - w / 2;
+        const drawY = enemy.y - h;
+        this.ctx.drawImage(img, drawX, drawY, w, h);
+      }
+
+      renderDragon(x, y) {
+        const img = spriteManager.get('dragon');
+        if (!img || !img.complete) return;
+        const targetHeight = 180;
+        const ratio = img.naturalWidth / img.naturalHeight || 1;
+        const w = targetHeight * ratio;
+        const h = targetHeight;
+        const drawX = x - w / 2;
+        const drawY = y - h;
+        this.ctx.drawImage(img, drawX, drawY, w, h);
+      }
+
+      renderProjectiles() {
+        const ctx = this.ctx;
+        this.projectiles.forEach(p => {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.isFinisher ? 16 : 8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      renderParticles() {
+        const ctx = this.ctx;
+        this.particles.forEach(p => {
+          if (p.isHeart) {
+            ctx.fillStyle = p.color;
+            ctx.font = '32px serif';
+            ctx.fillText('❤️', p.x, p.y);
+          } else {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+      }
+
+      tick(timestamp) {
+        const dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+
+        this.update(dt);
+        this.render();
+
+        requestAnimationFrame((t) => this.tick(t));
+      }
+
+      start() {
+        requestAnimationFrame((t) => this.tick(t));
+      }
+    }
+
+    window.addEventListener('load', () => {
+      const game = new GameEngine();
+      game.start();
+    });
+  </script>
+</body>
+</html>
